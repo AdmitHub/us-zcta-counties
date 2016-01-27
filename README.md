@@ -34,7 +34,7 @@ Install:
 
 ### `zcta.find(opts)`: Search by state, county, or zip.
 
-    var zcta = require("zcta");
+    var zcta = require("us-zcta-counties");
     zcta.find({state: "HI"});
 
     // returns:
@@ -52,7 +52,7 @@ Install:
 
 ### `zcta.getStates()`: List states
 
-    var zcta = require("zcta");
+    var zcta = require("us-zcta-counties");
     zcta.getStates();
 
     // returns:
@@ -60,7 +60,7 @@ Install:
 
 ### `zcta.getCountiesByState(state)`: List counties by state
 
-    var zcta = require("zcta");
+    var zcta = require("us-zcta-counties");
     zcta.getCountiesByState("HI")
 
     // returns
