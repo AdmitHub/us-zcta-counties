@@ -6,10 +6,18 @@
   "scripts": {
     "test": "mocha"
   },
-  "author": "",
+  "author": "Charlie DeTar",
   "license": "ISC",
   "devDependencies": {
     "chai": "^3.4.1",
     "mocha": "^2.4.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AdmitHub/us-zcta-counties.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AdmitHub/us-zcta-counties/issues"
+  },
+  "homepage": "https://github.com/AdmitHub/us-zcta-counties"
 }
