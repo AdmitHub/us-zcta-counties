@@ -13,11 +13,10 @@ from io import StringIO
 from zipfile import ZipFile
 
 BUILD = os.path.join(os.path.dirname(__file__), "build")
-OUT = os.path.join(os.path.dirname(__file__), "out")
+OUT_DIR = os.path.join(os.path.dirname(__file__))
 
 COUNTY_ZCTA = "http://www2.census.gov/geo/docs/maps-data/data/rel/zcta_county_rel_10.txt"
 COUNTY_GEO = "http://www2.census.gov/geo/docs/maps-data/data/gazetteer/Gaz_counties_national.zip"
-ZIP_CODES = "http://federalgovernmentzipcodes.us/free-zipcode-database-Primary.csv"
 
 RADIUS_OF_EARTH = 3961 # miles
 
@@ -59,28 +58,8 @@ def county_geo_reader():
             next(iterator)
             return iterator
 
-def zip_code_reader():
-    path = _retrieve(ZIP_CODES)
-    with open(path, encoding='utf-8') as fh:
-        reader = csv.reader(StringIO(fh.read()))
-        iterator = iter(reader)
-        next(iterator)
-        return iterator
-
-def deg_to_rad(deg):
-    return pi * deg / 180.
-
-def lat_lng_dist(lat1, lon1, lat2, lon2):
-    lat1, lon1, lat2, lon2 = [deg_to_rad(n) for n in (lat1, lon1, lat2, lon2)]
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
-    a = (sin(dlat/2)**2) + cos(lat1) * cos(lat2) * (sin(dlon/2)**2)
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    return RADIUS_OF_EARTH * c
-
 def main():
     zcta_reader = county_zcta_reader()
-    zip_reader = zip_code_reader()
     geo_reader = county_geo_reader()
 
     # Counties indexed by concatenated state/county fips code
@@ -91,63 +70,46 @@ def main():
         'longitude': None,
         'zip_codes': [],
     })
-    # Mapping of zip codes to concatenated state/county fips code
+    # Mapping of zip codes to state and county
     zip_codes = {}
-
-    # Skip the header
     for row in geo_reader:
         state, fips, _, county_name = row[0:4] 
         lat, lng = row[-2:]
         counties[fips]['name'] = county_name
+        counties[fips]['state'] = state
         counties[fips]['latitude'] = float(lat)
         counties[fips]['longitude'] = float(lng)
 
     for row in zcta_reader:
         zcta, _, _, fips = row[0:4]
-        zip_codes[zcta] = fips
         counties[fips]['zip_codes'].append(zcta)
+        zip_codes[zcta] = {
+            'state': counties[fips]['state'],
+            'county': counties[fips]['name']
+        }
 
-    dist_audit = {}
+    if not os.path.exists(OUT_DIR):
+        os.makedirs(OUT_DIR)
 
-    bad = {}
-    for row in zip_reader:
-        zipcode, _, _, _, _, lat, lng = row[0:7]
-        if zipcode not in zip_codes:
-            try:
-                lat = float(lat)
-                lng = float(lng)
-            except ValueError:
-                bad[zipcode] = row
-                continue
-            min_dist = 0
-            argmin = None
-            for fips, county in counties.items():
-                dist = lat_lng_dist(
-                    float(lat), float(lng),
-                    county['latitude'], county['longitude']
-                )
-                if argmin is None or dist < min_dist:
-                    argmin = fips
-                    min_dist = dist
-            dist_audit[zipcode] = (dist, row)
-            counties[argmin]['zip_codes'].append(zipcode)
-
-    if not os.path.exists(OUT):
-        os.makedirs(OUT)
-
-    with open(os.path.join(OUT, "bad.json"), 'w') as fh:
-        json.dump(bad, fh)
-
-    with open(os.path.join(OUT, "dist_audit.json"), 'w') as fh:
-        json.dump(dist_audit, fh)
-
+    # Build a {state: {county: {zip_codes: }}} mapping.
     od = OrderedDict()
-    for fips, county in sorted(counties.items(), key=lambda c: c[1]['name']):
-        od[county['name']] = {}
-        od[county['name']].update(county)
-        del od[county['name']]['name']
-    with open(os.path.join(OUT, "counties.json"), 'w') as fh:
+    for fips, county in sorted(counties.items(), key=lambda c: (c[1]['state'], c[1]['name'])):
+        if county['state'] not in od:
+            od[county['state']] = {'counties': OrderedDict()}
+        state = od[county['state']]
+        state['counties'][county['name']] = {
+            'zip_codes': county['zip_codes']
+        }
+    with open(os.path.join(OUT_DIR, "state_county_zip.json"), 'w') as fh:
         json.dump(od, fh, indent=1)
+
+    # Build a {zip: {county, state} mapping
+    zsc = {'zip_state_county': []}
+    for zcta, obj in sorted(zip_codes.items()):
+        zsc['zip_state_county'].append([zcta, obj['state'], obj['county']])
+    zsc['zip_state_county'].sort(key=lambda a: (a[1], a[2]))
+    with open(os.path.join(OUT_DIR, "zip_state_county.json"), 'w') as fh:
+        json.dump(zsc, fh, indent=0)
 
 if __name__ == "__main__":
     main()

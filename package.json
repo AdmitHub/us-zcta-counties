@@ -1,11 +1,15 @@
 {
-  "name": "us-counties",
+  "name": "us-zcta-counties",
   "version": "0.0.1",
-  "description": "List of US counties and mappings to states",
+  "description": "Mappings of us states to counties and ZipCode Tabulation Areas",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "chai": "^3.4.1",
+    "mocha": "^2.4.3"
+  }
 }
