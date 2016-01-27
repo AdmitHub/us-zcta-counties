@@ -1,6 +1,6 @@
 {
   "name": "us-zcta-counties",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Mappings of us states to counties and ZipCode Tabulation Areas",
   "main": "index.js",
   "scripts": {
